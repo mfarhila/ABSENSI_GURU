@@ -1,0 +1,19 @@
+### Tes server jalan
+GET http://localhost:3000/api/health
+
+### Tambah guru baru
+POST http://localhost:3000/api/guru
+Content-Type: application/json
+
+
+{
+  "nama": "Alek",
+  "kode_qr": "QR-ALEK-003"
+}
+
+### Lihat absensi
+GET http://localhost:3000/api/absen
+
+http://localhost:3000/api/export-excel
+
+

@@ -1,0 +1,50 @@
+/* ====== Global Style ====== */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+h1, h2 {
+  font-weight: 600;
+  color: #60d6fa; /* biru tua */
+}
+
+/* ====== Card Style ====== */
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* ====== Button Custom ====== */
+.btn-custom {
+  background-color: #60d6fa; /* biru */
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  display: inline-block;
+}
+
+.btn-custom:hover {
+  background-color: #60d6fa; /* biru lebih gelap */
+}
+
+/* ====== QR Wrap Style ====== */
+#qrWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+pre {
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-size: 0.9rem;
+  color: #374151;
+}

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Absensi Guru - Scan QR</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-2xl mx-auto card">
+  <h1 class="text-2xl mb-4">Absensi Guru - Scan QR</h1>
+  
+    <!-- Input Teacher ID -->
+    <div id="loginBox" class="mb-4">
+      <label class="block mb-2">ID Guru</label>
+      <input id="teacherId" class="border p-2 w-full rounded" placeholder="Contoh: T001" />
+      <div class="mt-2">
+        <button id="startScan" class="px-4 py-2 bg-blue-600 text-white rounded mt-2">Mulai Scan QR</button>
+      </div>
+    </div>
+
+    <!-- Area Kamera QR -->
+    <div id="reader" style="width:100%" class="mb-4"></div>
+
+    <!-- Status -->
+    <div id="status" class="text-sm text-gray-700"></div>
+  </div>
+
+  <script>
+    const startScanBtn = document.getElementById('startScan');
+    const teacherInput = document.getElementById('teacherId');
+    const statusEl = document.getElementById('status');
+
+    let html5QrcodeScanner = null;
+
+    startScanBtn.addEventListener('click', async () => {
+      const teacherId = teacherInput.value.trim();
+      if(!teacherId){ alert('Masukkan ID guru terlebih dahulu'); return; }
+
+      // Reset scanner
+      if(html5QrcodeScanner){
+        html5QrcodeScanner.clear().catch(e => console.error(e));
+        html5QrcodeScanner = null;
+      }
+
+      html5QrcodeScanner = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: 250 };
+
+      try{
+        await html5QrcodeScanner.start(
+          { facingMode: "environment" },
+          config,
+         qrCodeMessage => {
+  html5QrcodeScanner.stop();
+
+  // Kirim ke backend
+  fetch("http://localhost:3000/api/absen", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      nama: teacherId,    // ambil dari input guru
+      qrCode: qrCodeMessage // hasil scan QR
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.error){
+      statusEl.innerText = "❌ Gagal: " + data.error;
+    }else{
+      statusEl.innerText = `✅ Absensi berhasil disimpan untuk ${teacherId} (QR: ${qrCodeMessage})`;
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    statusEl.innerText = "❌ Error saat mengirim ke server.";
+  });
+}
+
+        );
+      }catch(err){
+        console.error(err);
+        alert('Gagal akses kamera. Coba browser lain atau periksa izin kamera.');
+      }
+    });
+  </script>
+</body>
+</html>
