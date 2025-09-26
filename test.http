@@ -16,4 +16,12 @@ GET http://localhost:3000/api/absen
 
 http://localhost:3000/api/export-excel
 
+POST http://localhost:3000/api/admin/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "1234"
+}
+
 
