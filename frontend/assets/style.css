@@ -1,0 +1,36 @@
+/* Animasi background gradient */
+body {
+  background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #9333ea, #ec4899);
+  background-size: 400% 400%;
+  animation: gradientBG 12s ease infinite;
+  min-height: 100vh;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Greeting text */
+#greeting {
+  position: absolute;
+  top: 1.5rem;  /* sama dengan top-6 Tailwind */
+  left: 1.5rem; /* sama dengan left-6 Tailwind */
+  font-size: 2.25rem; /* text-4xl */
+  font-weight: bold;
+  color: white;
+  animation: fadeInDown 1s ease;
+}
+
+/* Efek animasi text masuk */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
