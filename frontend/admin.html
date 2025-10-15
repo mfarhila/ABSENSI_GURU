@@ -4,48 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin - QR Absensi</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  <!-- Tambahkan CSS animasi -->
+  <!-- TailwindCSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css">
 
-  <!-- ✅ Cek token lebih awal -->
+  <!-- ✅ Cek Token Login -->
   <script>
-    const token = localStorage.getItem("token");
-    if (!token) {
-      window.location.href = "login.html"; // balik ke login kalau tidak ada token
-    }
-
-    // ✅ Helper fetch pakai Authorization
-    async function authFetch(url, options = {}) {
-      const headers = options.headers || {};
-      headers["Authorization"] = `Bearer ${token}`;
-
-      if (!options.noContentType && (!options.method || options.method !== "GET")) {
-        headers["Content-Type"] = "application/json";
-      }
-
-      const res = await fetch(url, { ...options, headers });
-
-      // Cek jika token invalid / expired
-      if (res.status === 401 || res.status === 403) {
-        alert("Sesi login habis, silakan login ulang");
-        localStorage.removeItem("token");
-        window.location.href = "login.html";
-        return;
-      }
-
-      return res;
-    }
-  </script>
+ if (!localStorage.getItem("token")) {
+    window.location.href = "login.html";
+  }
+</script>
 </head>
+
 <body class="bg-blue-400 p-6 min-h-screen flex items-center justify-center">
-
-  <!-- 👇 Tambahkan greeting di atas -->
-  <h1 id="greeting"></h1>
-
-  <div class="max-w-4xl w-full bg-white shadow-xl rounded-2xl p-8">
+  <div class="max-w-5xl w-full bg-white shadow-xl rounded-2xl p-8">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold text-blue-400">📋 Admin - QR Absensi Hari Ini</h1>
       <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition">
@@ -53,18 +26,56 @@
       </button>
     </div>
 
-    <!-- QR Code -->
+    <!-- 🔹 QR Code Area -->
     <div class="flex justify-center mb-6">
       <div id="qrWrap" class="p-4 border-2 border-blue-300 rounded-xl shadow-md bg-gray-50"></div>
     </div>
 
-    <!-- Tombol -->
-    <div class="mb-6 flex justify-center space-x-4">
+    <!-- 🔹 Tombol -->
+    <div class="mb-8 flex justify-center space-x-4">
       <button id="refresh" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow hover:scale-105 transform transition">🔄 Refresh QR</button>
       <button id="downloadExcel" class="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl shadow hover:scale-105 transform transition">⬇️ Download Excel</button>
     </div>
 
-    <!-- Rekap -->
+    <!-- 🔹 Logo Sekolah -->
+    <div class="flex justify-center mb-6">
+      <img src="assets/LOGO SMPN 1 SAWAN.jpg" alt="Logo Sekolah" class="w-32 h-32 object-contain">
+    </div>
+
+    <!-- 🔹 Form Tambah Guru -->
+    <div class="bg-blue-50 p-6 rounded-xl shadow-inner mb-8">
+      <h2 class="text-xl font-semibold text-blue-600 mb-4">➕ Tambah Guru Baru</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Nama Guru</label>
+          <input type="text" id="guruNama" class="mt-1 w-full p-2 border rounded-lg" placeholder="Nama guru..." required>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Kode QR</label>
+          <input type="text" id="guruQR" class="mt-1 w-full p-2 border rounded-lg" readonly placeholder="Klik Generate QR">
+        </div>
+
+        <div class="flex items-end">
+          <button id="generateQR" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg transition">
+            🔐 Generate QR
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-center mt-4">
+        <img id="previewQR" src="" alt="Preview QR" class="w-32 h-32 hidden border rounded-lg shadow">
+      </div>
+
+      <div class="flex justify-end mt-6">
+        <button id="simpanGuru" class="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
+          💾 Simpan Guru
+        </button>
+      </div>
+    </div>
+
+    <!-- 🔹 Rekap Absensi -->
     <h2 class="text-lg font-semibold text-blue-400 mt-4">📊 Rekap Absensi</h2>
     <div class="overflow-x-auto mt-2">
       <table class="min-w-full border border-gray-300 text-sm text-left">
@@ -81,92 +92,8 @@
     </div>
   </div>
 
-  <script>
-    // 🔹 Ambil QR token dari backend
-    async function generateQR() {
-      try {
-        const res = await authFetch("http://localhost:3000/api/generate-qr");
-        const data = await res.json();
-
-        document.getElementById('qrWrap').innerHTML = '';
-        new QRCode(document.getElementById('qrWrap'), {
-          text: data.qrCode,
-          width: 200,
-          height: 200
-        });
-      } catch (err) {
-        console.error("❌ Gagal ambil QR:", err);
-        alert("Tidak bisa ambil QR dari server");
-      }
-    }
-
-    // 🔹 Ambil data absensi dari backend
-    async function loadRekap() {
-      try {
-        const res = await authFetch("http://localhost:3000/api/absen");
-        const data = await res.json();
-
-        const tbody = document.getElementById('rekapTable');
-        tbody.innerHTML = "";
-
-        data.forEach((absen, i) => {
-          const tr = document.createElement("tr");
-          tr.classList.add(i % 2 === 0 ? "bg-gray-50" : "bg-white");
-          tr.innerHTML = `
-            <td class="px-4 py-2 border">${absen.id}</td>
-            <td class="px-4 py-2 border">${absen.nama}</td>
-            <td class="px-4 py-2 border">${absen.qrCode}</td>
-            <td class="px-4 py-2 border">${absen.waktu}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-
-      } catch (err) {
-        console.error("❌ Gagal ambil data absensi:", err);
-        document.getElementById('rekapTable').innerHTML =
-          `<tr><td colspan="4" class="px-4 py-2 text-center text-red-500">Gagal memuat data</td></tr>`;
-      }
-    }
-
-    // 🔹 Download Excel
-    async function downloadExcel() {
-      try {
-        const res = await authFetch("http://localhost:3000/api/export-excel", { noContentType: true });
-        if (!res.ok) throw new Error("Gagal download Excel");
-
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "rekap_absensi.xlsx";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      } catch (err) {
-        console.error("❌ Gagal download Excel:", err);
-        alert("Tidak bisa download Excel dari server");
-      }
-    }
-
-    // 🔹 Logout
-    function logout() {
-      localStorage.removeItem("token");
-      window.location.href = "login.html";
-    }
-
-    // Event
-    document.getElementById('refresh').addEventListener('click', () => {
-      generateQR();
-      loadRekap();
-    });
-    document.getElementById('downloadExcel').addEventListener('click', downloadExcel);
-
-    // Jalankan pertama kali
-    generateQR();
-    loadRekap();
-  </script>
-
-  <!-- 👇 Tambahkan script greeting -->
+  <!-- ✅ JavaScript -->
   <script src="assets/greeting.js"></script>
+  <script src="assets/admin.js"></script>
 </body>
 </html>

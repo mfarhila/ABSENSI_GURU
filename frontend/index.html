@@ -10,27 +10,32 @@
   <!-- Tambahkan animate.css -->
   <link rel="stylesheet" href="assets/style.css">
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-400 to-blue-700 relative">
+<body class="min-h-screen flex flex-col items-center justify-center">
 
   <!-- Tombol Admin Login -->
-  <div class="absolute top-4 right-4">
-    <a href="login.html" 
-       class="flex items-center gap-2 border border-white text-white px-4 py-2 rounded-full hover:bg-white hover:text-purple-600 transition">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M5.121 17.804A13.937 13.937 0 0112 15c2.485 0 
-                 4.797.657 6.879 1.804M15 11a3 3 0 
-                 11-6 0 3 0 016 0z" />
-      </svg>
-      Admin Login
-    </a>
-  </div>
+ <div class="absolute top-4 right-4">
+  <a href="login.html" 
+     class="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-white/20 hover:bg-white hover:text-blue-700 transition">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white hover:text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+            d="M5.121 17.804A13.937 13.937 0 0112 15c2.485 0 
+               4.797.657 6.879 1.804M15 11a3 3 0 
+               11-6 0 3 3 0 016 0z" />
+    </svg>
+  </a>
+</div>
 
   <!-- Greeting Dinamis -->
   <h1 id="greeting"></h1>
 
   <!-- Card Utama -->
   <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center animate__animated animate__fadeInUp">
+
+    <!-- 🏫 Logo Sekolah -->
+  <div class="flex justify-center mb-4">
+    <img src="assets/LOGO SMPN 1 SAWAN.jpg" alt="Logo Sekolah" class="w-20 h-20 object-contain rounded-full shadow-md">
+  </div>
+
     <h1 class="text-2xl font-bold mb-2">Absensi Guru</h1>
     <p class="text-gray-500 mb-6">Silakan masukkan ID Guru Anda</p>
 
@@ -98,7 +103,7 @@
             html5QrcodeScanner.stop();
 
             // Kirim ke backend TANPA token
-            fetch("http://localhost:3000/api/absen", {
+            fetch("https://peritrichate-isothermobathic-verona.ngrok-free.dev/api/absen", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({

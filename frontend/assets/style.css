@@ -1,6 +1,6 @@
 /* Animasi background gradient */
 body {
-  background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #9333ea, #ec4899);
+  background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #2ad9f8, #9333ea);
   background-size: 400% 400%;
   animation: gradientBG 12s ease infinite;
   min-height: 100vh;
@@ -17,7 +17,7 @@ body {
   position: absolute;
   top: 1.5rem;  /* sama dengan top-6 Tailwind */
   left: 1.5rem; /* sama dengan left-6 Tailwind */
-  font-size: 2.25rem; /* text-4xl */
+  font-size: 2.10rem; /* text-4xl */
   font-weight: bold;
   color: white;
   animation: fadeInDown 1s ease;

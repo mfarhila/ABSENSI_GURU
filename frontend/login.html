@@ -12,6 +12,12 @@
   <h1 id="greeting"></h1>
 
   <div class="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md">
+
+     <!-- 🏫 Logo Sekolah -->
+  <div class="flex justify-center mb-4">
+    <img src="assets/LOGO SMPN 1 SAWAN.jpg" alt="Logo Sekolah" class="w-20 h-20 object-contain rounded-full shadow-md">
+  </div>
+  
     <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">Login Admin</h1>
 
     <!-- Form Login -->
@@ -48,7 +54,7 @@
       const password = document.getElementById("password").value;
 
       try {
-        const res = await fetch("http://localhost:3000/api/login", {
+        const res = await fetch("https://peritrichate-isothermobathic-verona.ngrok-free.dev/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password })
