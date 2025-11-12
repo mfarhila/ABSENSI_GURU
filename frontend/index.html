@@ -6,53 +6,47 @@
   <title>Absensi Guru</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
-  <!-- Tambahkan animate.css -->
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center">
 
   <!-- Tombol Admin Login -->
- <div class="absolute top-4 right-4">
-  <a href="login.html" 
-     class="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-white/20 hover:bg-white hover:text-blue-700 transition">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white hover:text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-            d="M5.121 17.804A13.937 13.937 0 0112 15c2.485 0 
-               4.797.657 6.879 1.804M15 11a3 3 0 
-               11-6 0 3 3 0 016 0z" />
-    </svg>
-  </a>
-</div>
+  <div class="absolute top-4 right-4">
+    <a href="login.html"
+       class="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-white/20 hover:bg-white hover:text-blue-700 transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white hover:text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M5.121 17.804A13.937 13.937 0 0112 15c2.485 0 
+                 4.797.657 6.879 1.804M15 11a3 3 0 
+                 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </a>
+  </div>
 
   <!-- Greeting Dinamis -->
   <h1 id="greeting"></h1>
 
   <!-- Card Utama -->
   <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center animate__animated animate__fadeInUp">
-
-    <!-- 🏫 Logo Sekolah -->
-  <div class="flex justify-center mb-4">
-    <img src="assets/LOGO SMPN 1 SAWAN.jpg" alt="Logo Sekolah" class="w-20 h-20 object-contain rounded-full shadow-md">
-  </div>
+    <div class="flex justify-center mb-4">
+      <img src="assets/LOGO SMPN 1 SAWAN.jpg" alt="Logo Sekolah" class="w-20 h-20 object-contain rounded-full shadow-md">
+    </div>
 
     <h1 class="text-2xl font-bold mb-2">Absensi Guru</h1>
     <p class="text-gray-500 mb-6">Silakan masukkan ID Guru Anda</p>
 
-    <!-- Input ID Guru -->
     <div class="mb-4 text-left">
       <label class="block mb-2 font-medium">ID Guru</label>
-      <input id="teacherId" 
-             class="border p-3 w-full rounded-lg focus:ring-2 focus:ring-blue-400 outline-none" 
+      <input id="teacherId"
+             class="border p-3 w-full rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
              placeholder="Masukkan ID Guru" />
     </div>
 
-    <!-- Tombol Scan -->
-    <button id="startScan" 
+    <button id="startScan"
             class="w-full py-3 bg-gray-300 text-gray-700 rounded-lg flex items-center justify-center gap-2 font-medium hover:bg-gray-400 transition">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
            viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M3 7V5a2 2 0 012-2h2m10 
                  0h2a2 2 0 012 2v2m0 
                  10v2a2 2 0 01-2 2h-2m-10 
@@ -61,14 +55,11 @@
       Scan QR Code
     </button>
 
-    <!-- Area Kamera QR -->
     <div id="reader" class="mt-6 hidden"></div>
-
-    <!-- Status -->
     <div id="status" class="mt-4 text-sm text-gray-700"></div>
   </div>
 
-  <!-- Script QR -->
+  <!-- Script Absensi -->
   <script>
     const startScanBtn = document.getElementById('startScan');
     const teacherInput = document.getElementById('teacherId');
@@ -77,62 +68,97 @@
 
     let html5QrcodeScanner = null;
 
+    // 📍 Koordinat lokasi sekolah SMPN 1 SAWAN
+    const latitudeSekolah = -8.13805;
+    const longitudeSekolah = 115.17825;
+    const radiusMaks = 100; // jarak maksimal (meter)
+
+    // Fungsi untuk menghitung jarak antar koordinat (Haversine)
+    function hitungJarak(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; // meter
+      const φ1 = lat1 * Math.PI/180;
+      const φ2 = lat2 * Math.PI/180;
+      const Δφ = (lat2-lat1) * Math.PI/180;
+      const Δλ = (lon2-lon1) * Math.PI/180;
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
     startScanBtn.addEventListener('click', async () => {
       const teacherId = teacherInput.value.trim();
-      if(!teacherId){ 
-        alert('Masukkan ID guru terlebih dahulu'); 
-        return; 
+      if (!teacherId) {
+        alert('Masukkan ID guru terlebih dahulu');
+        return;
       }
 
-      readerDiv.classList.remove("hidden");
-
-      // Reset scanner
-      if(html5QrcodeScanner){
-        html5QrcodeScanner.clear().catch(e => console.error(e));
-        html5QrcodeScanner = null;
+      // ✅ Cek lokasi guru
+      if (!navigator.geolocation) {
+        alert('Perangkat Anda tidak mendukung GPS.');
+        return;
       }
 
-      html5QrcodeScanner = new Html5Qrcode("reader");
-      const config = { fps: 10, qrbox: 250 };
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const jarak = hitungJarak(latitude, longitude, latitudeSekolah, longitudeSekolah);
 
-      try{
-        await html5QrcodeScanner.start(
-          { facingMode: "environment" },
-          config,
-          qrCodeMessage => {
-            html5QrcodeScanner.stop();
+        if (jarak > radiusMaks) {
+          alert(`❌ Anda berada di luar area sekolah (${Math.round(jarak)} meter dari lokasi).`);
+          return;
+        }
 
-            // Kirim ke backend TANPA token
-            fetch("https://peritrichate-isothermobathic-verona.ngrok-free.dev/api/absen", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                nama: teacherId,
-                qrCode: qrCodeMessage
+        // ✅ Jika dalam radius, mulai scan QR
+        readerDiv.classList.remove("hidden");
+
+        if (html5QrcodeScanner) {
+          html5QrcodeScanner.clear().catch(e => console.error(e));
+          html5QrcodeScanner = null;
+        }
+
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: 250 };
+
+        try {
+          await html5QrcodeScanner.start(
+            { facingMode: "environment" },
+            config,
+            qrCodeMessage => {
+              html5QrcodeScanner.stop();
+              fetch("https://peritrichate-isothermobathic-verona.ngrok-free.dev/api/absen", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  nama: teacherId,
+                  qrCode: qrCodeMessage,
+                  lokasi: { latitude, longitude }
+                })
               })
-            })
-            .then(res => res.json())
-            .then(data => {
-              if(data.error){
-                statusEl.innerText = "❌ Gagal: " + data.error;
-              }else{
-                statusEl.innerText = `✅ Absensi berhasil disimpan untuk ${teacherId} (QR: ${qrCodeMessage})`;
-              }
-            })
-            .catch(err => {
-              console.error(err);
-              statusEl.innerText = "❌ Error saat mengirim ke server.";
-            });
-          }
-        );
-      }catch(err){
-        console.error(err);
-        alert('Gagal akses kamera. Coba browser lain atau periksa izin kamera.');
-      }
+              .then(res => res.json())
+              .then(data => {
+                if (data.error) {
+                  statusEl.innerText = "❌ Gagal: " + data.error;
+                } else {
+                  statusEl.innerText = `✅ Absensi berhasil disimpan untuk ${teacherId}`;
+                }
+              })
+              .catch(err => {
+                console.error(err);
+                statusEl.innerText = "❌ Error saat mengirim ke server.";
+              });
+            }
+          );
+        } catch (err) {
+          console.error(err);
+          alert('Gagal akses kamera. Coba browser lain atau periksa izin kamera.');
+        }
+      }, () => {
+        alert('Tidak dapat mengakses lokasi. Aktifkan GPS dan izinkan akses lokasi.');
+      });
     });
   </script>
 
-  <!-- Greeting -->
   <script src="assets/greeting.js"></script>
 </body>
 </html>

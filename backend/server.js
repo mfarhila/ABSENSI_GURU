@@ -7,20 +7,18 @@ const ExcelJS = require("exceljs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const QRCODE = require("qrcode");
+const cron = require("node-cron"); // ⏰ Tambahkan ini
 
 const app = express();
 const PORT = 3000;
 const SECRET_KEY = "rahasia_super_aman"; // gunakan env variable di production
 
 // ==================== Middleware ====================
-
-// Logging agar tahu request dari mana
 app.use((req, res, next) => {
   console.log(`📡 ${req.method} ${req.url} dari ${req.headers.origin}`);
   next();
 });
 
-// CORS untuk localhost & domain ngrok kamu
 app.use(cors({
   origin: [
     "http://localhost:3000",
@@ -41,12 +39,31 @@ const db = mysql.createPool({
   database: "absensi_db"
 });
 
+// ==================== Koordinat Sekolah ====================
+const sekolah = {
+  lat: -8.13805,
+  lng: 115.17825
+};
+
+// Fungsi hitung jarak antara dua koordinat (dalam km)
+function hitungJarak(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 // ==================== Endpoint Login ====================
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) {
+  if (!username || !password)
     return res.status(400).json({ error: "Username dan password wajib diisi" });
-  }
 
   try {
     const [rows] = await db.query("SELECT * FROM users WHERE username = ?", [username]);
@@ -87,32 +104,33 @@ function authMiddleware(req, res, next) {
   });
 }
 
-// ==================== Endpoint Absensi ====================
+// ==================== Endpoint Absensi (Validasi Lokasi) ====================
 app.post('/api/absen', async (req, res) => {
-  const { nama, qrCode } = req.body;
+  const { nama, qrCode, lat, lng } = req.body;
   if (!nama || !qrCode) {
     return res.status(400).json({ error: "Nama dan QR Code wajib diisi" });
   }
 
+  if (!lat || !lng) {
+    return res.status(400).json({ error: "Koordinat lokasi tidak ditemukan. Aktifkan GPS!" });
+  }
+
+  const jarak = hitungJarak(lat, lng, sekolah.lat, sekolah.lng);
+  console.log(`📍 Jarak user dari sekolah: ${jarak.toFixed(3)} km`);
+
+  if (jarak > 0.15) {
+    return res.status(403).json({ error: "❌ Absen hanya bisa dilakukan di area sekolah!" });
+  }
+
   try {
     const [result] = await db.query(
-      "INSERT INTO absensi (nama, qrCode) VALUES (?, ?)", 
-      [nama, qrCode]
+      "INSERT INTO absensi (nama, qrCode, lat, lng) VALUES (?, ?, ?, ?)",
+      [nama, qrCode, lat, lng]
     );
-    res.json({ message: "Absensi berhasil", id: result.insertId });
+    res.json({ message: "✅ Absensi berhasil disimpan!", id: result.insertId });
   } catch (err) {
     console.error("❌ Error insert absensi:", err);
     res.status(500).json({ error: "Gagal menyimpan absensi" });
-  }
-});
-
-app.get('/api/absen', authMiddleware, async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT * FROM absensi ORDER BY waktu DESC");
-    res.json(rows);
-  } catch (err) {
-    console.error("❌ Error ambil absensi:", err);
-    res.status(500).json({ error: "Gagal mengambil data absensi" });
   }
 });
 
@@ -125,7 +143,7 @@ app.post('/api/guru', authMiddleware, async (req, res) => {
 
   try {
     const [result] = await db.query(
-      "INSERT INTO guru (nama, kode_qr) VALUES (?, ?)", 
+      "INSERT INTO guru (nama, kode_qr) VALUES (?, ?)",
       [nama, kode_qr]
     );
     res.json({ message: "Guru berhasil ditambahkan", id: result.insertId });
@@ -139,9 +157,8 @@ app.get('/api/guru/:id/qr', authMiddleware, async (req, res) => {
   const id = req.params.id;
   try {
     const [rows] = await db.query("SELECT * FROM guru WHERE id = ?", [id]);
-    if (rows.length === 0) {
+    if (rows.length === 0)
       return res.status(404).json({ error: "Guru tidak ditemukan" });
-    }
     res.json(rows[0]);
   } catch (err) {
     console.error("❌ Error ambil guru:", err);
@@ -174,6 +191,8 @@ app.get('/api/export-excel', authMiddleware, async (req, res) => {
       { header: "ID", key: "id", width: 10 },
       { header: "Nama Guru", key: "nama", width: 25 },
       { header: "QR Code", key: "qrCode", width: 25 },
+      { header: "Latitude", key: "lat", width: 15 },
+      { header: "Longitude", key: "lng", width: 15 },
       { header: "Waktu", key: "waktu", width: 25 }
     ];
 
@@ -196,19 +215,23 @@ app.get('/api/export-excel', authMiddleware, async (req, res) => {
   }
 });
 
+// ==================== 🗓️ Reset Otomatis Setiap Bulan ====================
+cron.schedule('0 0 1 * *', async () => {
+  try {
+    console.log("🗓️ Reset otomatis bulanan dimulai...");
+    await db.query("TRUNCATE TABLE absensi");
+    console.log("✅ Data absensi berhasil direset otomatis pada awal bulan!");
+  } catch (err) {
+    console.error("❌ Gagal reset otomatis:", err);
+  }
+});
+
 // ==================== Serve Frontend ====================
 const frontendPath = path.join(__dirname, "../frontend");
 app.use(express.static(frontendPath));
 
 app.get("/", (req, res) => {
-  const filePath = path.join(frontendPath, "index.html");
-  console.log("🧾 Mengirim file:", filePath);
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error("❌ Gagal kirim file:", err);
-      res.status(500).send("Terjadi kesalahan saat mengirim file index.html");
-    }
-  });
+  res.sendFile(path.join(frontendPath, "index.html"));
 });
 
 app.get("/login", (req, res) => {
@@ -219,7 +242,6 @@ app.get("/admin", (req, res) => {
   res.sendFile(path.join(frontendPath, "admin.html"));
 });
 
-// Jika rute tidak ditemukan, arahkan ke index.html (opsional)
 app.get("*", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });

@@ -11,10 +11,10 @@
 
   <!-- ✅ Cek Token Login -->
   <script>
- if (!localStorage.getItem("token")) {
-    window.location.href = "login.html";
-  }
-</script>
+    if (!localStorage.getItem("token")) {
+      window.location.href = "login.html";
+    }
+  </script>
 </head>
 
 <body class="bg-blue-400 p-6 min-h-screen flex items-center justify-center">
@@ -22,25 +22,23 @@
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold text-blue-400">📋 Admin - QR Absensi Hari Ini</h1>
       <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition">
-        🚪 Logout
+         Logout
       </button>
     </div>
 
-    <!-- 🔹 QR Code Area -->
+    <!-- 🔹 QR Code (pindah ke atas tombol) -->
     <div class="flex justify-center mb-6">
-      <div id="qrWrap" class="p-4 border-2 border-blue-300 rounded-xl shadow-md bg-gray-50"></div>
+      <div id="qrWrap" class="p-4 border-2 border-blue-300 rounded-xl shadow-md bg-gray-50">
+        <img id="previewQR" src="" alt="Preview QR" class="w-40 h-40 hidden border rounded-lg shadow bg-white p-2">
+      </div>
     </div>
 
     <!-- 🔹 Tombol -->
     <div class="mb-8 flex justify-center space-x-4">
-      <button id="refresh" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow hover:scale-105 transform transition">🔄 Refresh QR</button>
-      <button id="downloadExcel" class="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl shadow hover:scale-105 transform transition">⬇️ Download Excel</button>
+      <button id="refresh" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow hover:scale-105 transform transition"> Refresh QR</button>
+      <button id="downloadExcel" class="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl shadow hover:scale-105 transform transition"> Download Excel</button>
     </div>
 
-    <!-- 🔹 Logo Sekolah -->
-    <div class="flex justify-center mb-6">
-      <img src="assets/LOGO SMPN 1 SAWAN.jpg" alt="Logo Sekolah" class="w-32 h-32 object-contain">
-    </div>
 
     <!-- 🔹 Form Tambah Guru -->
     <div class="bg-blue-50 p-6 rounded-xl shadow-inner mb-8">
@@ -59,18 +57,14 @@
 
         <div class="flex items-end">
           <button id="generateQR" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg transition">
-            🔐 Generate QR
+             Generate QR
           </button>
         </div>
       </div>
 
-      <div class="flex items-center justify-center mt-4">
-        <img id="previewQR" src="" alt="Preview QR" class="w-32 h-32 hidden border rounded-lg shadow">
-      </div>
-
       <div class="flex justify-end mt-6">
         <button id="simpanGuru" class="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
-          💾 Simpan Guru
+           Simpan Guru
         </button>
       </div>
     </div>
@@ -95,5 +89,22 @@
   <!-- ✅ JavaScript -->
   <script src="assets/greeting.js"></script>
   <script src="assets/admin.js"></script>
+
+  <!-- ✅ Tambahkan ini agar QR tampil di atas -->
+  <script>
+    document.getElementById("generateQR").addEventListener("click", async () => {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:3000/api/generate-qr", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      document.getElementById("guruQR").value = data.kode_qr;
+
+      const img = document.getElementById("previewQR");
+      img.src = data.qr_image;
+      img.style.display = "block";
+    });
+  </script>
 </body>
 </html>
