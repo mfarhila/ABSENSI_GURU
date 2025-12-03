@@ -73,7 +73,7 @@ async function simpanGuru() {
 // 🔹 Ambil Rekap Absensi
 async function loadRekap() {
   try {
-    const res = await authFetch(`${BASE_URL}/api/absen`);
+    const res = await authFetch(`${BASE_URL}/api/absensi`);
     const data = await res.json();
     const tbody = document.getElementById("rekapTable");
     tbody.innerHTML = "";

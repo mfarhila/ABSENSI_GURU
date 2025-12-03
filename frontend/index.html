@@ -8,7 +8,8 @@
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <link rel="stylesheet" href="assets/style.css">
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center">
+
+<body class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-300 to-blue-500">
 
   <!-- Tombol Admin Login -->
   <div class="absolute top-4 right-4">
@@ -23,11 +24,10 @@
     </a>
   </div>
 
-  <!-- Greeting Dinamis -->
   <h1 id="greeting"></h1>
 
   <!-- Card Utama -->
-  <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center animate__animated animate__fadeInUp">
+  <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center">
     <div class="flex justify-center mb-4">
       <img src="assets/LOGO SMPN 1 SAWAN.jpg" alt="Logo Sekolah" class="w-20 h-20 object-contain rounded-full shadow-md">
     </div>
@@ -59,7 +59,6 @@
     <div id="status" class="mt-4 text-sm text-gray-700"></div>
   </div>
 
-  <!-- Script Absensi -->
   <script>
     const startScanBtn = document.getElementById('startScan');
     const teacherInput = document.getElementById('teacherId');
@@ -69,20 +68,20 @@
     let html5QrcodeScanner = null;
 
     // 📍 Koordinat lokasi sekolah SMPN 1 SAWAN
-    const latitudeSekolah = -8.13805;
-    const longitudeSekolah = 115.17825;
+    const latitudeSekolah = -8.13827;
+    const longitudeSekolah = 115.17822;
     const radiusMaks = 100; // jarak maksimal (meter)
 
-    // Fungsi untuk menghitung jarak antar koordinat (Haversine)
+    // Fungsi hitung jarak antar koordinat (Haversine)
     function hitungJarak(lat1, lon1, lat2, lon2) {
-      const R = 6371e3; // meter
+      const R = 6371e3;
       const φ1 = lat1 * Math.PI/180;
       const φ2 = lat2 * Math.PI/180;
-      const Δφ = (lat2-lat1) * Math.PI/180;
-      const Δλ = (lon2-lon1) * Math.PI/180;
-      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+      const Δφ = (lat2 - lat1) * Math.PI/180;
+      const Δλ = (lon2 - lon1) * Math.PI/180;
+      const a = Math.sin(Δφ/2)**2 +
                 Math.cos(φ1) * Math.cos(φ2) *
-                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                Math.sin(Δλ/2)**2;
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       return R * c;
     }
@@ -94,22 +93,23 @@
         return;
       }
 
-      // ✅ Cek lokasi guru
       if (!navigator.geolocation) {
-        alert('Perangkat Anda tidak mendukung GPS.');
+        statusEl.innerHTML = "❌ Browser Anda tidak mendukung GPS.";
         return;
       }
+
+      statusEl.innerHTML = "📍 Memeriksa lokasi...";
 
       navigator.geolocation.getCurrentPosition(async (pos) => {
         const { latitude, longitude } = pos.coords;
         const jarak = hitungJarak(latitude, longitude, latitudeSekolah, longitudeSekolah);
 
         if (jarak > radiusMaks) {
-          alert(`❌ Anda berada di luar area sekolah (${Math.round(jarak)} meter dari lokasi).`);
+          statusEl.innerHTML = `❌ Anda berada di luar area sekolah (${Math.round(jarak)} meter dari lokasi).`;
           return;
         }
 
-        // ✅ Jika dalam radius, mulai scan QR
+        // ✅ Dalam radius, mulai scan QR
         readerDiv.classList.remove("hidden");
 
         if (html5QrcodeScanner) {
@@ -132,30 +132,37 @@
                 body: JSON.stringify({
                   nama: teacherId,
                   qrCode: qrCodeMessage,
-                  lokasi: { latitude, longitude }
+                  lat: latitude,
+                  lng: longitude
                 })
               })
               .then(res => res.json())
               .then(data => {
                 if (data.error) {
-                  statusEl.innerText = "❌ Gagal: " + data.error;
+                  statusEl.innerHTML = "❌ Gagal: " + data.error;
                 } else {
-                  statusEl.innerText = `✅ Absensi berhasil disimpan untuk ${teacherId}`;
+                  statusEl.innerHTML = `✅ Absensi berhasil untuk ${teacherId}`;
                 }
               })
               .catch(err => {
                 console.error(err);
-                statusEl.innerText = "❌ Error saat mengirim ke server.";
+                statusEl.innerHTML = "❌ Error saat mengirim ke server.";
               });
             }
           );
         } catch (err) {
           console.error(err);
-          alert('Gagal akses kamera. Coba browser lain atau periksa izin kamera.');
+          alert('⚠️ Gagal akses kamera. Pastikan izin kamera diaktifkan.');
         }
-      }, () => {
-        alert('Tidak dapat mengakses lokasi. Aktifkan GPS dan izinkan akses lokasi.');
-      });
+
+      }, (err) => {
+        // Penanganan jika user menolak izin lokasi
+        if (err.code === err.PERMISSION_DENIED) {
+          statusEl.innerHTML = "❌ Akses lokasi ditolak. Aktifkan izin lokasi di browser Anda.";
+        } else {
+          statusEl.innerHTML = "⚠️ Gagal mendapatkan lokasi. Pastikan GPS aktif.";
+        }
+      }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
     });
   </script>
 

@@ -89,22 +89,5 @@
   <!-- ✅ JavaScript -->
   <script src="assets/greeting.js"></script>
   <script src="assets/admin.js"></script>
-
-  <!-- ✅ Tambahkan ini agar QR tampil di atas -->
-  <script>
-    document.getElementById("generateQR").addEventListener("click", async () => {
-      const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:3000/api/generate-qr", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const data = await res.json();
-
-      document.getElementById("guruQR").value = data.kode_qr;
-
-      const img = document.getElementById("previewQR");
-      img.src = data.qr_image;
-      img.style.display = "block";
-    });
-  </script>
 </body>
 </html>

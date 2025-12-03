@@ -7,7 +7,8 @@ const ExcelJS = require("exceljs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const QRCODE = require("qrcode");
-const cron = require("node-cron"); // ⏰ Tambahkan ini
+const cron = require("node-cron"); // ⏰ Reset otomatis
+const { error } = require('console');
 
 const app = express();
 const PORT = 3000;
@@ -31,6 +32,13 @@ app.use(cors({
 
 app.use(bodyParser.json());
 
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
+
 // ==================== Koneksi MySQL ====================
 const db = mysql.createPool({
   host: "localhost",
@@ -41,8 +49,8 @@ const db = mysql.createPool({
 
 // ==================== Koordinat Sekolah ====================
 const sekolah = {
-  lat: -8.13805,
-  lng: 115.17825
+  lat: -8.13827,
+  lng: 115.17822
 };
 
 // Fungsi hitung jarak antara dua koordinat (dalam km)
@@ -104,7 +112,7 @@ function authMiddleware(req, res, next) {
   });
 }
 
-// ==================== Endpoint Absensi (Validasi Lokasi) ====================
+// ==================== Endpoint Absensi (Validasi Lokasi + Waktu) ====================
 app.post('/api/absen', async (req, res) => {
   const { nama, qrCode, lat, lng } = req.body;
   if (!nama || !qrCode) {
@@ -122,15 +130,30 @@ app.post('/api/absen', async (req, res) => {
     return res.status(403).json({ error: "❌ Absen hanya bisa dilakukan di area sekolah!" });
   }
 
+  // Waktu server
+ const now = new Date();
+const waktuSekarang = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+  .toISOString()
+  .slice(0, 19)
+  .replace("T", " ");
+
   try {
-    const [result] = await db.query(
-      "INSERT INTO absensi (nama, qrCode, lat, lng) VALUES (?, ?, ?, ?)",
-      [nama, qrCode, lat, lng]
+
+    // ==================== PERBAIKAN DI SINI ====================
+    await db.query(
+      "INSERT INTO absensi (nama, qrCode, lat, lng, waktu) VALUES (?, ?, ?, ?, ?)",
+      [nama, qrCode, lat, lng, waktuSekarang]
     );
-    res.json({ message: "✅ Absensi berhasil disimpan!", id: result.insertId });
+    // ===========================================================
+
+    res.json({ message: "✅ Absensi berhasil disimpan!" });
+
   } catch (err) {
-    console.error("❌ Error insert absensi:", err);
-    res.status(500).json({ error: "Gagal menyimpan absensi" });
+    console.error("❌ Error insert absensi:", err.sqlMessage || err.message);
+    res.status(500).json({
+      error: "Gagal menyimpan absensi",
+      detail: err.sqlMessage || err.message
+    });
   }
 });
 
@@ -171,7 +194,11 @@ app.get('/api/generate-qr', authMiddleware, async (req, res) => {
   try {
     const kodeQR = "QR-" + Date.now();
     const qrImage = await QRCODE.toDataURL(kodeQR);
-    res.json({ kode_qr: kodeQR, qr_image: qrImage });
+
+    res.json({
+      kode_qr: kodeQR,
+      qr_image: qrImage
+    });
   } catch (err) {
     console.error("❌ Gagal Membuat QR:", err);
     res.status(500).json({ error: "Gagal Membuat QR Code" });
@@ -181,6 +208,7 @@ app.get('/api/generate-qr', authMiddleware, async (req, res) => {
 // ==================== Endpoint Export Excel ====================
 app.get('/api/export-excel', authMiddleware, async (req, res) => {
   console.log("📥 Endpoint /api/export-excel dipanggil");
+
   try {
     const [rows] = await db.query("SELECT * FROM absensi");
 
@@ -196,7 +224,29 @@ app.get('/api/export-excel', authMiddleware, async (req, res) => {
       { header: "Waktu", key: "waktu", width: 25 }
     ];
 
-    rows.forEach(row => worksheet.addRow(row));
+    // ⭐ Format tanggal Excel (Indonesia)
+    worksheet.getColumn('waktu').numFmt = 'dd/mm/yyyy hh:mm:ss';
+
+    rows.forEach(row => {
+      let waktuFix = row.waktu;
+
+      // Ubah string → Date
+      if (!(waktuFix instanceof Date)) {
+        waktuFix = new Date(waktuFix);
+      }
+
+      // ⭐ FIX timezone: tambahkan +8 jam agar sesuai WITA
+      waktuFix = new Date(waktuFix.getTime() + (8 * 60 * 60 * 1000));
+
+      worksheet.addRow({
+        id: row.id,
+        nama: row.nama,
+        qrCode: row.qrCode,
+        lat: row.lat,
+        lng: row.lng,
+        waktu: waktuFix
+      });
+    });
 
     res.setHeader(
       "Content-Type",
@@ -212,6 +262,22 @@ app.get('/api/export-excel', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error("❌ Error export excel:", err);
     res.status(500).json({ error: "Gagal export ke Excel" });
+  }
+});
+
+// ==================== Endpoint Rekap Absensi Hari Ini ====================
+app.get('/api/absensi', authMiddleware, async (req, res)=> {
+  try {
+    const [rows] = await db.query(`
+      SELECT id, nama, qrCode, lat, lng, waktu 
+      FROM absensi
+      ORDER BY waktu DESC 
+    `);
+
+    res.json(rows);
+  }catch (err){
+    console.error("Error load absensi:", err)
+    res.status(500).json({error: "Gagal memuat absensi"});
   }
 });
 
